@@ -161,11 +161,10 @@ private:
 class random_slider : public random_agent {
 public:
 	random_slider(const std::string& args = "") : random_agent("name=slide role=slider " + args),
-		opcode({ 0, 1, 2, 3 }) {}
-	
-	//random
+		opcode({ 0, 1, 3, 2 }) {}
+
+	//logic
 	/*virtual action take_action(const board& before) {
-		std::shuffle(opcode.begin(), opcode.end(), engine);
 		for (int op : opcode) {
 			board::reward reward = board(before).slide(op);
 			if (reward != -1) return action::slide(op);
@@ -175,7 +174,6 @@ public:
 
 	//greedy
 	virtual action take_action(const board& before) {
-		std::shuffle(opcode.begin(), opcode.end(), engine);
 		int point = -1, act;
 		for (int op : opcode) {
 			board::reward reward = board(before).slide(op);
@@ -188,15 +186,6 @@ public:
 		return action();
 	}
 
-	//logic
-	/*virtual action take_action(const board& before) {
-		std::shuffle(opcode.begin(), opcode.end(), engine);
-		for (int op : opcode) {
-			board::reward reward = board(before).slide(op);
-			if (reward != -1) return action::slide(op);
-		}
-		return action();
-	}*/
 private:
 	std::array<int, 4> opcode;
 };
