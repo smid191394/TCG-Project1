@@ -22,7 +22,7 @@ int main(int argc, const char* argv[]) {
 	std::copy(argv, argv + argc, std::ostream_iterator<const char*>(std::cout, " "));
 	std::cout << std::endl << std::endl;
 
-	//int 
+	//int iii
 	size_t total = 1000, block = 0, limit = 0;
 	std::string slide_args, place_args;
 	std::string load_path, save_path;
