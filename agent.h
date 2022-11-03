@@ -18,6 +18,9 @@
 #include "board.h"
 #include "action.h"
 #include "weight.h"
+#include <iostream>
+
+using namespace std;
 
 class agent {
 public:
@@ -32,7 +35,7 @@ public:
 	virtual ~agent() {}
 	virtual void open_episode(const std::string& flag = "") {}
 	virtual void close_episode(const std::string& flag = "") {}
-	virtual action take_action(const board& b) { return action(); }
+	virtual action take_action(const board& b, float (*pattern)[70000], int (*trail)[9], int& step, bool learned) { return action(); }
 	virtual bool check_for_win(const board& b) { return false; }
 
 public:
@@ -130,7 +133,7 @@ public:
 		spaces[4] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
 	}
 
-	virtual action take_action(const board& after) {
+	virtual action take_action(const board& after, float (*pattern)[70000], int (*trail)[9], int& step, bool learned) {
 		std::vector<int> space = spaces[after.last()];
 		std::shuffle(space.begin(), space.end(), engine);
 		for (int pos : space) {
@@ -161,31 +164,77 @@ private:
 class random_slider : public random_agent {
 public:
 	random_slider(const std::string& args = "") : random_agent("name=slide role=slider " + args),
-		opcode({ 0, 1, 3, 2 }) {}
+	opcode({ 0, 1, 2, 3 }) {}
 
-	//logic
-	/*virtual action take_action(const board& before) {
-		for (int op : opcode) {
-			board::reward reward = board(before).slide(op);
-			if (reward != -1) return action::slide(op);
+
+	int translate(int a, int b, int c, int d){
+		return a*4096+b*256+c*16+d;
+	}
+	virtual action take_action(const board& before, float (*pattern)[70000], int (*trail)[9], int& step, bool learned) {
+		/*
+		cout<<step<<endl;
+			for(int i=0; i<4; i++){
+				for(int j=0; j<4; j++){
+					cout<<before[i][j]<<" ";
+			}
+			cout<<endl;
 		}
-		return action();
-	}*/
+		cout<<endl;*/
+		int act = 0;
+		float now_val, after_val;		
+		board after[4] = {before, before, before, before};
+		float reward[4];
 
-	//greedy
-	virtual action take_action(const board& before) {
-		int point = -1, act;
-		for (int op : opcode) {
-			board::reward reward = board(before).slide(op);
-			if(point<reward){
-				point=reward;
+		
+		now_val = -1;
+		for(int op:opcode){
+			//compute after board
+			reward[op]=(float)after[op].slide(op);
+			
+			//choose direction
+			after_val = 
+			reward[op] + 
+			pattern[0][translate(after[op][0][0], after[op][0][1], after[op][0][2], after[op][0][3])] +
+			pattern[0][translate(after[op][0][3], after[op][1][3], after[op][2][3], after[op][3][3])] +
+			pattern[0][translate(after[op][3][3], after[op][3][2], after[op][3][1], after[op][3][0])] +
+			pattern[0][translate(after[op][3][0], after[op][2][0], after[op][1][0], after[op][0][0])] +
+			pattern[1][translate(after[op][1][0], after[op][1][1], after[op][1][2], after[op][1][3])] +
+			pattern[1][translate(after[op][0][2], after[op][1][2], after[op][2][2], after[op][3][2])] +
+			pattern[1][translate(after[op][2][3], after[op][2][2], after[op][2][1], after[op][2][0])] +
+			pattern[1][translate(after[op][3][1], after[op][2][1], after[op][1][1], after[op][0][1])];
+			if(after_val==0){
 				act=op;
+				break;
+			}
+			if(after_val>now_val){
+				act = op;
+				now_val = after_val;
 			}
 		}
-		if (point != -1) return action::slide(act);
+
+		
+		if(!learned){
+			trail[step][0] = translate(after[act][0][0], after[act][0][1], after[act][0][2], after[act][0][3]);
+			trail[step][1] = translate(after[act][0][3], after[act][1][3], after[act][2][3], after[act][3][3]);
+			trail[step][2] = translate(after[act][3][3], after[act][3][2], after[act][3][1], after[act][3][0]);
+			trail[step][3] = translate(after[act][3][0], after[act][2][0], after[act][1][0], after[act][0][0]);
+			trail[step][4] = translate(after[act][1][0], after[act][1][1], after[act][1][2], after[act][1][3]);
+			trail[step][5] = translate(after[act][0][2], after[act][1][2], after[act][2][2], after[act][3][2]);
+			trail[step][6] = translate(after[act][2][3], after[act][2][2], after[act][2][1], after[act][2][0]);
+			trail[step][7] = translate(after[act][3][1], after[act][2][1], after[act][1][1], after[act][0][1]);
+			if(reward[act] == -1) trail[step][8] = 0;
+			else trail[step][8] = reward[act];
+		}
+
+		if (reward[act] != -1){
+			step++;			
+			return action::slide(act);
+		}
 		return action();
 	}
 
 private:
 	std::array<int, 4> opcode;
 };
+
+
